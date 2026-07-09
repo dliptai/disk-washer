@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# License: MIT (see LICENSE)
+#
 # diskWasher — wipe partition remnants from a replacement disk and run basic health checks.
 #
 # Usage: diskWasher /dev/sdX
