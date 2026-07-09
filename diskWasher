@@ -14,19 +14,29 @@ BLOCK_SIZE="1M"
 die()  { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
+# Parses dd output for speed. Handles both GNU format ("117 MB/s") and
+# BSD/macOS format ("1010188825 bytes/sec"). Normalizes to MB/s for comparison.
 check_speed() {
     local label="$1" line="$2"
     echo "$line" | awk -v label="$label" '{
-        for (i=1; i<=NF; i++) {
-            if ($i ~ /^[0-9.]+$/ && $(i+1) ~ /^(MB|GB)\/s$/) {
-                num = $i
-                unit = $(i+1)
-                if (unit == "GB/s") num *= 1000
-                if (num < 100) print "  WARNING: " label " below 100 MB/s"
-                else if (num < 200) print "  NOTE: " label " below 200 MB/s"
-                break
-            }
+        if (match($0, /[0-9.]+ (MB|GB)\/s/)) {
+            speed_str = substr($0, RSTART, RLENGTH)
+            sub(/\/s$/, "", speed_str)
+            split(speed_str, parts, " ")
+            num = parts[1]
+            unit = parts[2]
+            if (unit == "GB") num *= 1000
+        } else if (match($0, /[0-9.]+ bytes\/sec/)) {
+            speed_str = substr($0, RSTART, RLENGTH)
+            sub(/\/sec$/, "", speed_str)
+            sub(/ bytes$/, "", speed_str)
+            num = speed_str / 1048576
+            unit = "MB"
+        } else {
+            next
         }
+        if (num < 100) print "  WARNING: " label " below 100 MB/s"
+        else if (num < 200) print "  NOTE: " label " below 200 MB/s"
     }'
 }
 
