@@ -71,6 +71,10 @@ else
     info "smartctl not found, skipping SMART check"
 fi
 
+# --- Partition probe ---
+info "probing partition table:"
+partprobe "$DISK"
+
 # --- dd write speed ---
 info "write speed (1 GB sequential):"
 WRITE_LINE=$(dd if=/dev/zero of="$DISK" bs=10M count=100 oflag=direct conv=notrunc status=progress 2>&1 | tee /dev/tty | tail -1)
