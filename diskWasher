@@ -65,9 +65,8 @@ dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count="$WIPE_MB" seek="$OFFSET" ofla
 
 # --- SMART check ---
 if command -v smartctl >/dev/null 2>&1; then
-    info "SMART status:"
-    smartctl -H "$DISK" || true
-    smartctl -i "$DISK" || true
+    info "SMART data:"
+    smartctl -a "$DISK" || true
 else
     info "smartctl not found, skipping SMART check"
 fi
