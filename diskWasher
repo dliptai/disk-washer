@@ -15,14 +15,9 @@ die()  { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
 [[ $# -eq 1 ]] || die "usage: $0 <device>"
-DEV="$1"
+DISK="$1"
 
-[[ -b "$DEV" ]] || die "$DEV is not a block device"
-
-# Resolve to the underlying disk (strip partition suffix) so we wipe the whole disk.
-DISK="${DEV%/}"
-DISK="${DISK%%[0-9]*}"
-[[ -b "/dev/$DISK" ]] || DISK="$DEV"
+[[ -b "$DISK" ]] || die "$DISK is not a block device"
 
 info "target disk: $DISK"
 
