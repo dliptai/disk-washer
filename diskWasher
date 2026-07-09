@@ -41,6 +41,9 @@ info "target disk: $DISK"
 SIZE_BYTES=$(blockdev --getsize64 "$DISK")
 [[ -n "$SIZE_BYTES" ]] || die "could not determine size of $DISK"
 
+# Disk must be at least 200 MB to wipe first and last 100 MB without overlap.
+[[ $SIZE_BYTES -ge 209715200 ]] || die "$DISK is too small (< 200 MB)"
+
 info "wiping first ${WIPE_MB} MB..."
 dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count="$WIPE_MB" oflag=direct conv=notrunc status=progress
 
