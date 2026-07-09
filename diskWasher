@@ -26,11 +26,11 @@ SIZE_BYTES=$(blockdev --getsize64 "$DISK")
 [[ -n "$SIZE_BYTES" ]] || die "could not determine size of $DISK"
 
 info "wiping first ${WIPE_MB} MB..."
-dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count="$WIPE_MB" conv=notrunc status=progress
+dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count="$WIPE_MB" oflag=direct conv=notrunc status=progress
 
 info "wiping last ${WIPE_MB} MB..."
 OFFSET=$(( (SIZE_BYTES / 1048576) - WIPE_MB ))
-dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count="$WIPE_MB" seek="$OFFSET" conv=notrunc status=progress
+dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count="$WIPE_MB" seek="$OFFSET" oflag=direct conv=notrunc status=progress
 
 # --- SMART check ---
 if command -v smartctl >/dev/null 2>&1; then
@@ -42,11 +42,11 @@ else
 fi
 
 # --- dd write speed ---
-info "write speed (100 MB sequential):"
-dd if=/dev/zero of="$DISK" bs="$BLOCK_SIZE" count=100 oflag=direct conv=notrunc status=progress 2>&1 | tail -1
+info "write speed (1 GB sequential):"
+dd if=/dev/zero of="$DISK" bs=10M count=100 oflag=direct conv=notrunc status=progress 2>&1 | tail -1
 
 # --- dd read speed ---
-info "read speed (100 MB sequential):"
-dd if="$DISK" of=/dev/null bs="$BLOCK_SIZE" count=100 iflag=direct status=progress 2>&1 | tail -1
+info "read speed (1 GB sequential):"
+dd if="$DISK" of=/dev/null bs=10M count=100 iflag=direct status=progress 2>&1 | tail -1
 
 info "done. $DISK is ready for use."
