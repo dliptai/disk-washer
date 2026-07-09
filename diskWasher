@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # License: MIT (see LICENSE)
 #
-# diskWasher — wipe partition remnants from a replacement disk and run basic health checks.
+# diskWasher - wipe partition remnants from a replacement disk and run basic health checks.
 #
 # Usage: diskWasher /dev/sdX
 #
@@ -14,7 +14,7 @@ WIPE_MB=100
 BLOCK_SIZE="1M"
 
 die()  { echo "error: $*" >&2; exit 1; }
-info() { echo "==> $*"; }
+info() { echo ""; echo "==> $*"; }
 
 # Parses dd output for speed. Handles both GNU format ("117 MB/s") and
 # BSD/macOS format ("1010188825 bytes/sec"). Normalizes to MB/s for comparison.
