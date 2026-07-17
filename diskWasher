@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # License: MIT (see LICENSE)
 #
 # diskWasher - wipe partition remnants from a replacement disk and run basic health checks.
