@@ -49,6 +49,63 @@ DISK="$1"
 
 info "target disk: $DISK"
 
+# --- Release kernel software RAID (md) ---
+# Stop any md array using the disk before doing anything else.
+
+DISK_NAME=$(basename "$(readlink -f "$DISK")")   # resolves by-id symlinks etc. to e.g. "sdc"
+
+# Print md devices (e.g. md126) that have the disk, or a partition of it, as a member.
+md_users() {
+    local md dev real
+    for md in /sys/block/md*; do
+        [[ -d $md/md ]] || continue               # skip if glob didn't match / not an md array
+        for dev in "$md"/md/dev-*; do             # one dev-<name> entry per member device
+            [[ -e $dev/block ]] || continue
+            real=$(readlink -f "$dev/block")      # e.g. .../block/sdc  or  .../block/sdc/sdc1
+            # Match if this member is the target disk itself or one of its partitions.
+            #   whole disk: .../block/sdc       -> basename is "sdc"
+            #   partition:  .../block/sdc/sdc1  -> basename is "sdc1", but the parent dir is "sdc"
+            if [[ $(basename "$real") == "$DISK_NAME" || $(basename "$(dirname "$real")") == "$DISK_NAME" ]]; then
+                basename "$md"
+                break                             # one hit per array is enough
+            fi
+        done
+    done
+}
+
+MDS=$(md_users)
+if [[ -n $MDS ]]; then
+    command -v mdadm >/dev/null 2>&1 || die "$DISK is in an md array but mdadm is not installed"
+
+    # A container (e.g. DDF) can't be stopped while a subarray is active, so
+    # stop subarrays first. Subarrays have metadata_version "external:/mdXXX/N".
+    # (Plain strings, not arrays: bash 4.2 + set -u chokes on empty arrays.)
+    MEMBERS="" OTHERS=""
+    for md in $MDS; do
+        if [[ $(cat "/sys/block/$md/md/metadata_version" 2>/dev/null) == external:/* ]]; then
+            MEMBERS="$MEMBERS $md"
+        else
+            OTHERS="$OTHERS $md"
+        fi
+    done
+
+    # Log the member list too: stopping a container also releases its other disks
+    for md in $MEMBERS $OTHERS; do
+        info "stopping /dev/$md (members: $(ls -d /sys/block/$md/md/dev-* 2>/dev/null | sed 's|.*/dev-||' | tr '\n' ' '))"
+        mdadm --stop "/dev/$md"
+    done
+
+    # Sanity check: refuse to wipe if md still holds the disk
+    [[ -z $(md_users) ]] || die "$DISK is still claimed by md after stopping arrays"
+
+    # With md gone, let multipath re-claim the paths it was blocked from
+    if systemctl is-active --quiet multipathd; then
+        info "restarting multipathd..."
+        systemctl restart multipathd
+        udevadm settle                            # wait for udev to finish creating mpath maps
+    fi
+fi
+
 # --- Wipe first and last 100 MB ---
 SIZE_BYTES=$(blockdev --getsize64 "$DISK")
 [[ -n "$SIZE_BYTES" ]] || die "could not determine size of $DISK"
